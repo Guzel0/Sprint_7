@@ -1,67 +1,81 @@
 import io.restassured.RestAssured;
-import io.restassured.response.Response;
-import org.example.Courier;
+import org.apache.http.HttpStatus;
+import org.example.CourierApi;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
 public class CourierLoginTest {
-    private Response getResponse(Courier courier){
-        Response response =
-                given()
-                        .header("Content-type", "application/json")
-                        .and()
-                        .body(courier)
-                        .when()
-                        .post("/api/v1/courier/login");
-        return response;
-    }
-
+    Integer id;
     @Before
     public void setUp() {
         RestAssured.baseURI = "http://qa-scooter.praktikum-services.ru";
     }
     @Test
     public void testForSuccessLoginCourier(){
-        Courier courier = new Courier("Guzelka", "12345");
-        Response response = getResponse(courier);
-        response.then().assertThat().body("id", notNullValue())
+        CourierApi.create("Guzelka", "12345", "Guzel");
+        id = CourierApi.login("Guzelka", "12345")
+                .then()
+                .assertThat()
+                .body("id", notNullValue())
                 .and()
-                .statusCode(200);
+                .statusCode(HttpStatus.SC_OK)
+                .extract()
+                .path("id");
     }
     @Test
     public void testForRequiredPasswordCourier(){
-        Courier courier = new Courier("Guzelka", "");
-        Response response = getResponse(courier);
-        response.then().assertThat().body("message", equalTo("Недостаточно данных для входа"))
+        CourierApi.login("Guzelka", "")
+                .then()
+                .assertThat()
+                .body("message", equalTo("Недостаточно данных для входа"))
                 .and()
-                .statusCode(400);
+                .statusCode(HttpStatus.SC_BAD_REQUEST);
     }
     @Test
     public void testForRequiredLoginCourier(){
-        Courier courier = new Courier("", "12345");
-        Response response = getResponse(courier);
-        response.then().assertThat().body("message", equalTo("Недостаточно данных для входа"))
+        CourierApi.login("", "12345")
+                .then()
+                .assertThat()
+                .body("message", equalTo("Недостаточно данных для входа"))
                 .and()
-                .statusCode(400);
+                .statusCode(HttpStatus.SC_BAD_REQUEST);
     }
     @Test
     public void testForWrongPasswordCourier(){
-        Courier courier = new Courier("Guzelka", "123456");
-        Response response = getResponse(courier);
-        response.then().assertThat().body("message", equalTo("Учетная запись не найдена"))
+        CourierApi.create("Guzelka", "12345", "Guzel");
+        CourierApi.login("Guzelka", "123456")
+                .then()
+                .assertThat()
+                .body("message", equalTo("Учетная запись не найдена"))
                 .and()
-                .statusCode(404);
+                .statusCode(HttpStatus.SC_NOT_FOUND);
+        id = CourierApi.login("Guzelka", "12345")
+                .then()
+                .extract()
+                .path("id");
     }
     @Test
     public void testForWrongLoginCourier(){
-        Courier courier = new Courier("Guzelk", "12345");
-        Response response = getResponse(courier);
-        response.then().assertThat().body("message", equalTo("Учетная запись не найдена"))
+        CourierApi.create("Guzelka", "12345", "Guzel");
+        CourierApi.login("Guzelk", "123456")
+                .then()
+                .assertThat()
+                .body("message", equalTo("Учетная запись не найдена"))
                 .and()
-                .statusCode(404);
-    }
+                .statusCode(HttpStatus.SC_NOT_FOUND);
+        id = CourierApi.login("Guzelka", "12345")
+                .then()
+                .extract()
+                .path("id");
 
+    }
+    @After
+    public void deleteCourier() {
+        if(id != null) {
+            CourierApi.delete(id);
+        }
+    }
 }

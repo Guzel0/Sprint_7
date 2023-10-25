@@ -1,12 +1,11 @@
 import io.restassured.RestAssured;
-import io.restassured.response.Response;
-import org.example.NewOrder;
+import org.apache.http.HttpStatus;
+import org.example.OrderApi;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
 @RunWith(Parameterized.class)
@@ -29,25 +28,13 @@ public class CreateOrderTest {
         };
     }
 
-    private Response getResponse(NewOrder newOrder){
-        Response response =
-                given()
-                        .header("Content-type", "application/json")
-                        .and()
-                        .body(newOrder)
-                        .when()
-                        .post("/api/v1/orders");
-        return response;
-    }
-
     @Before
     public void setUp() {
         RestAssured.baseURI = "http://qa-scooter.praktikum-services.ru";
     }
     @Test
     public void testForSuccessCreateOrder(){
-        NewOrder newOrder = new NewOrder(
-                "Guzel",
+        OrderApi.create("Guzel",
                 "Karabaeva",
                 "Kazan",
                 "Prospect",
@@ -55,12 +42,12 @@ public class CreateOrderTest {
                 1,
                 "2023-10-20",
                 "Hi",
-                colors
-        );
-        Response response = getResponse(newOrder);
-        response.then().assertThat().body("track", notNullValue())
+                colors)
+                .then()
+                .assertThat()
+                .body("track", notNullValue())
                 .and()
-                .statusCode(201);
+                .statusCode(HttpStatus.SC_CREATED);
     }
 
 }
